@@ -33,6 +33,7 @@ jobs:
       - name: Build
         run: npm run build
       - name: Publish to Cloudflare Pages
+        if: ${{ github.repository == 'satelllte/adsr' }}
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

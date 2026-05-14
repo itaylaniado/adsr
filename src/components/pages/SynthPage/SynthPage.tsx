@@ -27,6 +27,7 @@ import {SynthPageSkeleton} from './SynthPageSkeleton';
 import {KnobsLayout} from './KnobsLayout';
 import {SynthPageLayout} from './SynthPageLayout';
 import {MidiSelector} from './MidiSelector';
+import {AdsrEnvelope} from './AdsrEnvelope';
 
 const {colors} = resolveConfig(tailwindConfig).theme;
 
@@ -102,18 +103,22 @@ function SynthPageMain({ctx, core}: SynthPageMainProps) {
   const attackKey = 'attack';
   const attackDefault = 0.001;
   const attackConst = useElConst(attackKey, attackDefault);
+  const [attack, setAttack] = useState<number>(attackDefault);
 
   const decayKey = 'decay';
   const decayDefault = 0.6;
   const decayConst = useElConst(decayKey, decayDefault);
+  const [decay, setDecay] = useState<number>(decayDefault);
 
   const sustainKey = 'sustain';
   const sustainDefault = 0.7;
   const sustainConst = useElConst(sustainKey, sustainDefault);
+  const [sustain, setSustain] = useState<number>(sustainDefault);
 
   const releaseKey = 'release';
   const releaseDefault = 0.6;
   const releaseConst = useElConst(releaseKey, releaseDefault);
+  const [release, setRelease] = useState<number>(releaseDefault);
 
   const meterLeftSource = 'meter:left';
   const meterRightSource = 'meter:right';
@@ -173,6 +178,38 @@ function SynthPageMain({ctx, core}: SynthPageMainProps) {
     [freqConst, play],
   );
 
+  const updateEnvelope = useCallback(
+    (next: {
+      attack?: number;
+      decay?: number;
+      sustain?: number;
+      release?: number;
+    }) => {
+      if (next.attack !== undefined) {
+        attackConst.update(next.attack);
+        setAttack(next.attack);
+      }
+
+      if (next.decay !== undefined) {
+        decayConst.update(next.decay);
+        setDecay(next.decay);
+      }
+
+      if (next.sustain !== undefined) {
+        sustainConst.update(next.sustain);
+        setSustain(next.sustain);
+      }
+
+      if (next.release !== undefined) {
+        releaseConst.update(next.release);
+        setRelease(next.release);
+      }
+
+      void renderAudio();
+    },
+    [attackConst, decayConst, sustainConst, releaseConst, renderAudio],
+  );
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) {
@@ -210,56 +247,65 @@ function SynthPageMain({ctx, core}: SynthPageMainProps) {
         meterLeft={<Meter ref={meterLeftRef} />}
         meterRight={<Meter ref={meterRightRef} />}
       >
-        <KnobsLayout>
-          <KnobInput
-            isLarge
-            title='Frequency'
-            kind='frequency'
-            defaultValue={freqDefault}
-            value={freq}
-            onChange={(newValue) => {
-              freqConst.update(newValue);
-              void renderAudio();
-              setFreq(newValue);
-            }}
+        <div className='flex w-full flex-col gap-2'>
+          <KnobsLayout>
+            <KnobInput
+              isLarge
+              title='Frequency'
+              kind='frequency'
+              defaultValue={freqDefault}
+              value={freq}
+              onChange={(newValue) => {
+                freqConst.update(newValue);
+                void renderAudio();
+                setFreq(newValue);
+              }}
+            />
+            <KnobInput
+              title='Attack'
+              kind='adr'
+              defaultValue={attackDefault}
+              value={attack}
+              onChange={(newValue) => {
+                updateEnvelope({attack: newValue});
+              }}
+            />
+            <KnobInput
+              title='Decay'
+              kind='adr'
+              defaultValue={decayDefault}
+              value={decay}
+              onChange={(newValue) => {
+                updateEnvelope({decay: newValue});
+              }}
+            />
+            <KnobInput
+              title='Sustain'
+              kind='percentage'
+              defaultValue={sustainDefault}
+              value={sustain}
+              onChange={(newValue) => {
+                updateEnvelope({sustain: newValue});
+              }}
+            />
+            <KnobInput
+              title='Release'
+              kind='adr'
+              defaultValue={releaseDefault}
+              value={release}
+              onChange={(newValue) => {
+                updateEnvelope({release: newValue});
+              }}
+            />
+          </KnobsLayout>
+          <AdsrEnvelope
+            attack={attack}
+            decay={decay}
+            sustain={sustain}
+            release={release}
+            onChange={updateEnvelope}
           />
-          <KnobInput
-            title='Attack'
-            kind='adr'
-            defaultValue={attackDefault}
-            onChange={(newValue) => {
-              attackConst.update(newValue);
-              void renderAudio();
-            }}
-          />
-          <KnobInput
-            title='Decay'
-            kind='adr'
-            defaultValue={decayDefault}
-            onChange={(newValue) => {
-              decayConst.update(newValue);
-              void renderAudio();
-            }}
-          />
-          <KnobInput
-            title='Sustain'
-            kind='percentage'
-            defaultValue={sustainDefault}
-            onChange={(newValue) => {
-              sustainConst.update(newValue);
-              void renderAudio();
-            }}
-          />
-          <KnobInput
-            title='Release'
-            kind='adr'
-            defaultValue={releaseDefault}
-            onChange={(newValue) => {
-              releaseConst.update(newValue);
-              void renderAudio();
-            }}
-          />
-        </KnobsLayout>
+        </div>
       </SynthContainer>
       <InteractionArea
         icon={<PlayIcon />}
